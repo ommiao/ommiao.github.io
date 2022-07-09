@@ -10,7 +10,8 @@
     --line-1: #ccc;
     --line-2: #ddd;
 }
-p
+p,
+li
 {
     word-wrap: break-word;
     white-space: pre-wrap;
