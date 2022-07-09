@@ -1,0 +1,3 @@
+[submodule "themes/one-paper"]
+	path = themes/one-paper
+	url = https://github.com/ommiao/hexo-theme-one-paper
