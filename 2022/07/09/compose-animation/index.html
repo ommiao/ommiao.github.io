@@ -70,7 +70,7 @@ val animateXOffset by animateDpAsState(
 Box(modifier = Modifier.offset(x = animateXOffset))
 </code></pre>
 <p>代码十分简单，只需要将左右两个最终状态的Offset值设置到<code>targetValue</code>，然后将<code>animateDpAsState</code>返回的<code>state</code>绑定到<code>Modifier</code>就大工告成了！</p>
-<p>接下来只需要改变目标状态，就可以看到下面的动画效果了：<br><img src="/compose-animation/demo.gif" alt="Demo"></p>
+<p>接下来只需要改变目标状态，就可以看到下面的动画效果了：<br><img src="/demo.gif" alt="Demo"></p>
 
     </div>
 
