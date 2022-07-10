@@ -1,8 +1,12 @@
 ---
 title: About
 ---
-Welcome to [Hexo](https://hexo.io/)! This is your very first post. Check [documentation](https://hexo.io/docs/) for more info. If you get any problems when using Hexo, you can find the answer in [troubleshooting](https://hexo.io/docs/troubleshooting.html) or you can ask me on [GitHub](https://github.com/hexojs/hexo/issues).
+## 关于
 
-## Quick Start
+一个不爱选择，也不想期望的人的简单的Blog。中级Android开发者，工作之余会开发一些基于兴趣的小工具。
 
-### Create a new post
+#### Links
+
+[Github](https://github.com/ommiao)
+[Google Play Developer](https://play.google.com/store/apps/details?id=cn.ommiao.iconpackcreator)
+[Cool Apk Developer](https://www.coolapk.com/apk/cn.ommiao.iconpackcreator)
