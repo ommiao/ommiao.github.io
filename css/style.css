@@ -319,6 +319,8 @@ a
     justify-content: flex-start;
     align-content: center;
     padding: 12px 0;
+    word-break: break-all;
+    white-space: normal;
 }
 .archive li:nth-child(odd)
 {
