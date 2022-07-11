@@ -45,10 +45,10 @@
     <div class="post-md">
         <p>作为移动端App来说，动画效果是页面切换和用户交互过程中不可缺少的一部分，优雅炫酷的动画可以提升App整体的质量，给用户带来赏心悦目的使用体验。<a target="_blank" rel="noopener" href="https://developer.android.com/jetpack/compose">Jetpack Compose</a>作为Google官方最新推出的UI开发框架，可以极大地提高UI开发效率，对动画的支持也十分友好，此篇文章，我按照常见的动画场景作为分类，记录一下各种场景如何在Compose中实现。</p>
 <p><a target="_blank" rel="noopener" href="https://github.com/ommiao/ComposeAnimation">Compose Animation Demo</a>，包含了此文章所有示例代码。</p>
-<h3 id="场景一、View或Layout的外观属性变化"><a href="#场景一、View或Layout的外观属性变化" class="headerlink" title="场景一、View或Layout的外观属性变化"></a>场景一、View或Layout的外观属性变化</h3><blockquote>
+<h4 id="场景一、View或Layout的外观属性变化"><a href="#场景一、View或Layout的外观属性变化" class="headerlink" title="场景一、View或Layout的外观属性变化"></a>场景一、View或Layout的外观属性变化</h4><blockquote>
 <p>该场景是指此View或Layout在View树中一直存在，仅仅是Size&#x2F;Alpha&#x2F;Scale&#x2F;Offset&#x2F;Color等基本属性发生了变化。在这种场景下我们使用animate*AsState家族来实现动画效果。</p>
 </blockquote>
-<h4 id="适用于属性动画的animate-AsState家族"><a href="#适用于属性动画的animate-AsState家族" class="headerlink" title="适用于属性动画的animate*AsState家族"></a>适用于属性动画的animate*AsState家族</h4><p>之所以称之为家族，是因为这种命名方式的API有多个，涵盖了View的各个属性，此类API可以提供各种属性的state，state的刷新则由Compose内部实现，从而驱动UI按照state的变化而变化。</p>
+<h5 id="适用于属性动画的animate-AsState家族"><a href="#适用于属性动画的animate-AsState家族" class="headerlink" title="适用于属性动画的animate*AsState家族"></a>适用于属性动画的animate*AsState家族</h5><p>之所以称之为家族，是因为这种命名方式的API有多个，涵盖了View的各个属性，此类API可以提供各种属性的state，state的刷新则由Compose内部实现，从而驱动UI按照state的变化而变化。</p>
 <p>家族成员如下：</p>
 <ul>
 <li>animateIntAsState&#x2F;animateFloatAsState</li>
@@ -61,7 +61,7 @@
 </ul>
 <p>其中<code>animateIntAsState/animateFloatAsState</code> API提供简单数据类型的<code>state</code>，可以根据需要灵活地用于各种属性动画；其他API则是针对性地提供对应类型属性的<code>state</code>，可以更加方便地绑定给View的<code>Modifier</code>；<code>animateValueAsState</code>则是范型类型的方法，用于扩展任意类型属性，同时也是其他所有API底层实现所调用的API，一般不需要直接使用<code>animateValueAsState</code>。</p>
 <p>下面通过几个示例了解一下：</p>
-<h5 id="1-示例一、animateDpAsState"><a href="#1-示例一、animateDpAsState" class="headerlink" title="1. 示例一、animateDpAsState"></a>1. 示例一、animateDpAsState</h5><p>此处假设我们需要Box在左右方向的Offset动画，代码如下：</p>
+<h5 id="示例一、animateDpAsState"><a href="#示例一、animateDpAsState" class="headerlink" title="示例一、animateDpAsState"></a>示例一、animateDpAsState</h5><p>此处假设我们需要Box在左右方向的Offset动画，代码如下：</p>
 <pre><code class="kotlin">var state by remember &#123;
  mutableStateOf(State.START)
 &#125;
@@ -123,6 +123,69 @@ animationSpec: AnimationSpec&lt;Dp&gt; = dpDefaultSpring, finishedListener: ((Dp
 <img src="/2022/07/09/compose-animation/demo-animate-dp-as-state-5.gif" class="" title="demo-animate-dp-as-state-5">
 
 <hr>
+<h5 id="示例二、animateColorAsState"><a href="#示例二、animateColorAsState" class="headerlink" title="示例二、animateColorAsState"></a>示例二、animateColorAsState</h5><blockquote>
+<p>颜色变化在UI交互中也很常见，并且大家都知道虽然颜色可以用一个16进制值来表示，但是其实是分为RGBA四个通道的，因此颜色的渐变也不是简单的一维数字变化，而是每个通道分别控制。</p>
+</blockquote>
+<p>最初我非常天真地以为颜色渐变就是动态改变16进制颜色值，也就是按照整型将初始值逐渐更新到目标值，得到了如下闪瞎眼的动画效果：</p>
+<hr>
+<img src="/2022/07/09/compose-animation/demo-animate-color-as-state-1.gif" class="" title="demo-animate-color-as-state-1">
+
+<hr>
+<p>而<code>animateColorAsState</code>实现的则是我们预期的效果：</p>
+<hr>
+<img src="/2022/07/09/compose-animation/demo-animate-color-as-state-2.gif" class="" title="demo-animate-color-as-state-2">
+
+<hr>
+<p><code>animateColorAsState</code>的定义：</p>
+<pre><code class="kotlin">@Composable
+fun animateColorAsState(
+    targetValue: Color,
+    animationSpec: AnimationSpec&lt;Color&gt; = colorDefaultSpring,
+    finishedListener: ((Color) -&gt; Unit)? = null
+): State&lt;Color&gt; &#123;
+    …
+&#125;
+</code></pre>
+<p>可以看到，和<code>animateDpAsState</code>是十分相似的，<code>animate*AsState</code>家族的API定义是高度一致的，唯一的区别是返回的State类型不同。</p>
+<h4 id="场景二、View或Layout的可见性变化"><a href="#场景二、View或Layout的可见性变化" class="headerlink" title="场景二、View或Layout的可见性变化"></a>场景二、View或Layout的可见性变化</h4><blockquote>
+<p>该场景是指View或Layout的可见性在true和false之间的切换，该场景我们使用AnimatedVisibility。</p>
+</blockquote>
+<h5 id="适用于可见性变化的AnimatedVisibility"><a href="#适用于可见性变化的AnimatedVisibility" class="headerlink" title="适用于可见性变化的AnimatedVisibility"></a>适用于可见性变化的AnimatedVisibility</h5><p><code>AnimatedVisibility</code>是一个容器，用于控制内部View&#x2F;Layout可见性发生变化时的过渡效果。先来看看API定义：</p>
+<pre><code class="kotlin">@Composable
+fun AnimatedVisibility(
+ visible: Boolean,
+ modifier: Modifier = Modifier,
+ enter: EnterTransition = xxxIn(),
+ exit: ExitTransition = xxxOut(),
+ content: @Composable AnimatedVisibilityScope.() -&gt; Unit
+) &#123;
+ …
+&#125;
+</code></pre>
+<p>其中<code>visible</code>指当前可见性的目标状态，<code>enter</code>指View&#x2F;Layout变为可见时的进入效果，<code>exit</code>指View&#x2F;Layout变为不可见的退出效果。</p>
+<p><code>enter</code>和<code>exit</code>是成对实现的，有如下类型：</p>
+<ol>
+<li>fadeIn &#x2F; fadeOut</li>
+<li>slideIn &#x2F; slideOut</li>
+<li>slideInH&#x2F;V &#x2F; slideOutH&#x2F;V</li>
+<li>scaleIn &#x2F; scaleOut</li>
+<li>expandIn &#x2F; shrinkOut</li>
+<li>expandH&#x2F;V &#x2F; shrinkH&#x2F;V</li>
+</ol>
+<hr>
+<img src="/2022/07/09/compose-animation/demo-animate-visibility-1.gif" class="" title="demo-animate-visibility-1">
+
+<hr>
+<p>通过动画效果预览，我们可以看出绝大部分的动画过程，但有个不易察觉的地方需要注意，<code>slide</code>和<code>expand</code>的效果乍一看是一样的，但其实<code>slide</code>在执行时不会动态改变容器的Size，而<code>expand</code>在执行时容器的Size是动态改变的，请看如下的对比：</p>
+<hr>
+<img src="/2022/07/09/compose-animation/demo-animate-visibility-2.gif" class="" title="demo-animate-visibility-2">
+
+<hr>
+<p>熟悉了<code>AnimatedVisibility</code>支持的动画效果，就可以随心应用了，但还有个语法糖可以了解一下，即<code>EnterTransition</code>是可以使用<code>+</code>叠加的，比如可以使用<code>sildeIn() + fadeIn()</code>将Offset和Alpha动画进行合并，同理<code>ExitTransition</code>也是可以叠加的，用起来就是两个字：舒服！</p>
+<h4 id="场景三、View或Layout之间的切换"><a href="#场景三、View或Layout之间的切换" class="headerlink" title="场景三、View或Layout之间的切换"></a>场景三、View或Layout之间的切换</h4><h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><ol>
+<li>三个场景之间的关系</li>
+<li>本篇文章的未涉及部分</li>
+</ol>
 <h4 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h4>
     </div>
 
