@@ -182,7 +182,46 @@ fun AnimatedVisibility(
 
 <hr>
 <p>熟悉了<code>AnimatedVisibility</code>支持的动画效果，就可以随心应用了，但还有个语法糖可以了解一下，即<code>EnterTransition</code>是可以使用<code>+</code>叠加的，比如可以使用<code>sildeIn() + fadeIn()</code>将Offset和Alpha动画进行合并，同理<code>ExitTransition</code>也是可以叠加的，用起来就是两个字：舒服！</p>
-<h4 id="场景三、View或Layout之间的切换"><a href="#场景三、View或Layout之间的切换" class="headerlink" title="场景三、View或Layout之间的切换"></a>场景三、View或Layout之间的切换</h4><h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><ol>
+<p>每个<code>enter</code>或<code>exit</code>的API都支持<code>animationSpec</code>参数，因此场景一里列出的的<code>animationSpec</code>在场景二也是适用的。</p>
+<h4 id="场景三、View或Layout之间的切换"><a href="#场景三、View或Layout之间的切换" class="headerlink" title="场景三、View或Layout之间的切换"></a>场景三、View或Layout之间的切换</h4><blockquote>
+<p>该场景是指两个不同的View或Layout切换，此处的”不同”不仅仅代表两个View或Layout的代码本身不同，也可以是同一个View在不同State下渲染的”不同”，比如Text文字由”1”变为”2”，两次渲染的结果也可以看作是两个不同的View。该场景有两个API，CrossFade和AnimatedContent。</p>
+</blockquote>
+<h5 id="示例一、简单的渐变效果容器Crossfade"><a href="#示例一、简单的渐变效果容器Crossfade" class="headerlink" title="示例一、简单的渐变效果容器Crossfade"></a>示例一、简单的渐变效果容器Crossfade</h5><p>Crossfade是一个非常易用的API：</p>
+<pre><code class="kotlin">@Composable
+fun &lt;T&gt; Crossfade(
+ targetState: T,
+ modifier: Modifier = Modifier,
+ animationSpec: FiniteAnimationSpec&lt;Float&gt; = tween(),
+ content: @Composable (T) -&gt; Unit
+) &#123;
+ …
+&#125;
+</code></pre>
+<p><code>Crossfade</code>实际上是对View进行alpha属性的变化，<code>targetState</code>可是是任意类型，一般可以使用<code>enum</code>类型标记UI状态，<code>animationSpec</code>则和上文一致，下面来看一个示例：</p>
+<pre><code class="kotlin">Crossfade(
+    targetState = crossfadeState,
+    animationSpec = tween(2000)
+) &#123;
+    when (it) &#123;
+        CrossfadeState.LOADING -&gt; &#123;
+            Loading()
+        &#125;
+        CrossfadeState.SUCCESS -&gt; &#123;
+            Success()
+        &#125;
+        CrossfadeState.ERROR -&gt; &#123;
+            Error()
+        &#125;
+    &#125;
+&#125;
+</code></pre>
+<p>这段代码实现了<code>Loading</code>、<code>Success</code>和<code>Error</code>状态的渐变切换：</p>
+<hr>
+
+
+<hr>
+<p>Crossfade没有其他使用方式，也没有alpha渐变之外的任何效果，如果有其他需求请使用<code>AnimatedContent</code>，<code>Crossfade</code>可以看作是<code>AnimatedContent</code>的一个具体实例，但在底层实现上二者并没有关系。</p>
+<h5 id="示例二、AnimatedContent实现数字切换动画"><a href="#示例二、AnimatedContent实现数字切换动画" class="headerlink" title="示例二、AnimatedContent实现数字切换动画"></a>示例二、AnimatedContent实现数字切换动画</h5><h5 id="示例三、AnimatedContent实现不同大小View的切换"><a href="#示例三、AnimatedContent实现不同大小View的切换" class="headerlink" title="示例三、AnimatedContent实现不同大小View的切换"></a>示例三、AnimatedContent实现不同大小View的切换</h5><h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><ol>
 <li>三个场景之间的关系</li>
 <li>本篇文章的未涉及部分</li>
 </ol>
