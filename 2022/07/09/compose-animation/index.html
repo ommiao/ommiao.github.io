@@ -217,15 +217,100 @@ fun &lt;T&gt; Crossfade(
 </code></pre>
 <p>这段代码实现了<code>Loading</code>、<code>Success</code>和<code>Error</code>状态的渐变切换：</p>
 <hr>
-
+<img src="/2022/07/09/compose-animation/demo-crossfade.gif" class="" title="demo-crossfade">
 
 <hr>
 <p>Crossfade没有其他使用方式，也没有alpha渐变之外的任何效果，如果有其他需求请使用<code>AnimatedContent</code>，<code>Crossfade</code>可以看作是<code>AnimatedContent</code>的一个具体实例，但在底层实现上二者并没有关系。</p>
-<h5 id="示例二、AnimatedContent实现数字切换动画"><a href="#示例二、AnimatedContent实现数字切换动画" class="headerlink" title="示例二、AnimatedContent实现数字切换动画"></a>示例二、AnimatedContent实现数字切换动画</h5><h5 id="示例三、AnimatedContent实现不同大小View的切换"><a href="#示例三、AnimatedContent实现不同大小View的切换" class="headerlink" title="示例三、AnimatedContent实现不同大小View的切换"></a>示例三、AnimatedContent实现不同大小View的切换</h5><h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><ol>
-<li>三个场景之间的关系</li>
-<li>本篇文章的未涉及部分</li>
-</ol>
-<h4 id="未完待续"><a href="#未完待续" class="headerlink" title="未完待续"></a>未完待续</h4>
+<h5 id="示例二、AnimatedContent实现数字切换动画"><a href="#示例二、AnimatedContent实现数字切换动画" class="headerlink" title="示例二、AnimatedContent实现数字切换动画"></a>示例二、AnimatedContent实现数字切换动画</h5><p>先来看一段代码：</p>
+<pre><code class="kotlin">AnimatedContent(
+    targetState = count,
+    transitionSpec = &#123;
+        if (targetState &gt; initialState) &#123;
+            ContentTransform(
+                targetContentEnter = slideInVertically &#123; height -&gt; height &#125; + fadeIn(),
+                initialContentExit = slideOutVertically &#123; height -&gt; -height &#125; + fadeOut(),
+                sizeTransform = SizeTransform(clip = false)
+            )
+        &#125; else &#123;
+            ContentTransform(
+                targetContentEnter = slideInVertically &#123; height -&gt; -height &#125; + fadeIn(),
+                initialContentExit = slideOutVertically &#123; height -&gt; height &#125; + fadeOut(),
+                sizeTransform = SizeTransform(clip = false)
+            )
+        &#125;
+    &#125;
+) &#123; target -&gt;
+    Text(
+        text = &quot;$target&quot;,
+        textAlign = TextAlign.Center,
+        color = Color.White,
+        style = MaterialTheme.typography.h3,
+        modifier = Modifier.width(100.dp)
+    )
+&#125;
+</code></pre>
+<p>这段代码里只有一个<code>Text</code>，并没有明显的View切换，但当<code>count</code>变化时，<code>Text</code>会重新绘制，这种情况也可以理解为View发生了切换，看看动画效果就更容易理解了：</p>
+<hr>
+<img src="/2022/07/09/compose-animation/demo-animated-content-1.gif" class="" title="demo-animated-content-1">
+
+<hr>
+<p>所以我们可以理解为，当state发生改变，导致<code>AnimatedContent</code>中的UI重绘时，当前的UI会执行退出动画，而新绘制的UI会执行进入动画。</p>
+<p><code>AnimatedContent</code>接收的参数是<code>transitionSpec</code>，其类型为<code>() -&gt; ContentTransform</code>，而我们可以定义一个返回<code>ContentTransform</code>的lambda表达式，这样的好处是我们可以根据不同的场景动态返回，比如上述的数字从大到小和从小到大，动画的方向是相反的。</p>
+<p><code>ContentTransform</code>主要包含三个参数：</p>
+<ul>
+<li>targetContentEnter - 新UI进入的EnterTransition，可参考场景二</li>
+<li>initialContentExit - 当前UI退出的ExitTransition，亦可参考场景二</li>
+<li>sizeTransform - 控制动画过程中的Size变化以及是否可以超出父级绘制UI（clip&#x3D;false，在某些场景可能需要溢出父级后依然执行动画）</li>
+</ul>
+<h5 id="示例三、AnimatedContent实现不同大小View的切换"><a href="#示例三、AnimatedContent实现不同大小View的切换" class="headerlink" title="示例三、AnimatedContent实现不同大小View的切换"></a>示例三、AnimatedContent实现不同大小View的切换</h5><pre><code class="kotlin">AnimatedContent(
+    targetState = expanded,
+    transitionSpec = &#123;
+        ContentTransform(
+            targetContentEnter = fadeIn(animationSpec = tween(200, 200)),
+            initialContentExit = fadeOut(animationSpec = tween(200)),
+            sizeTransform = SizeTransform &#123; initialSize, targetSize -&gt;
+                if (targetState) &#123;
+                    keyframes &#123;
+                        // Expand horizontally first.
+                        IntSize(targetSize.width, initialSize.height) at 200
+                        durationMillis = 400
+                    &#125;
+                &#125; else &#123;
+                    keyframes &#123;
+                        // Shrink vertically first.
+                        IntSize(initialSize.width, targetSize.height) at 200
+                        durationMillis = 400
+                    &#125;
+                &#125;
+            &#125;
+        )
+    &#125;
+) &#123; targetExpanded -&gt;
+    if (targetExpanded) &#123;
+        Expanded()
+    &#125; else &#123;
+        ContentIcon()
+    &#125;
+&#125;
+</code></pre>
+<p>分析一下，首先当前UI的退出动画是<code>fadeOut</code>，新UI的进入动画是<code>fadeIn</code>，此外Size的变化是如果<code>expanded=true</code>，则先将宽度变化到目标值而高度不变，反之<code>expanded=false</code>则先将高度变化到目标值而宽度不变：</p>
+<hr>
+<img src="/2022/07/09/compose-animation/demo-animated-content-2.gif" class="" title="demo-animated-content-2">
+
+<hr>
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>本篇文章在介绍Compose Animation时，根据使用场景作为划分，而在官方文档中稍有不同，是根据API定义的高低级别划分，高级别是指直接附带动画的Container，即场景二和场景三部分，低级别是指针对属性指产生动态State，即场景一部分。</p>
+<p>不难发现，三个动画场景其实是一脉相承的：</p>
+<ul>
+<li>场景二中的<code>AnimatedVisibility</code>中会使用场景一中的<code>animationSpec</code></li>
+<li>场景三中的<code>AnimatedContent</code>中会使用场景二中的<code>EnterTransition</code>和<code>ExitTransition</code></li>
+</ul>
+<p>除了上述的三个动画场景，官方文档还有其他API可供参考：</p>
+<hr>
+<img src="/2022/07/09/compose-animation/animation-flowchart.svg" class="" title="animation-flowchart">
+
+<hr>
+<h5 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h5><p><a target="_blank" rel="noopener" href="https://github.com/ommiao/ComposeAnimation">Compose Animation Demo</a><br><a target="_blank" rel="noopener" href="https://developer.android.com/jetpack/compose/animation">Compose Animation Doc</a></p>
+
     </div>
 
 </div>
