@@ -23,6 +23,7 @@
     "hexo-renderer-marked": "^5.0.0",
     "hexo-renderer-stylus": "^2.1.0",
     "hexo-server": "^3.0.0",
+    "hexo-tag-photozoom": "^1.0.2",
     "hexo-theme-landscape": "^0.0.3"
   }
 }

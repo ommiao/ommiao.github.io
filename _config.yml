@@ -105,3 +105,12 @@ deploy:
   type: git
   repository: https://github.com/ommiao/ommiao.github.io.git
   branch: master
+
+photozoom:
+  enable: true
+  # Lower priority means that it will be executed first.
+  priority: 10
+  # Show caption at the bottom of photo, default is "true"
+  caption: false
+  # Class name of caption, default is "zoom-initial-caption"
+  caption_class: 'my-caption'
