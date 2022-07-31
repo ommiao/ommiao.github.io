@@ -11,7 +11,7 @@ tags:
 事情的开头是这样的，QQ邮箱的垃圾箱收到这么一封邮件，通篇内容看不明白，但在其中夹杂着一个QQ群号提示进群有佣金，不用多想大概率是刷单之类的诈骗群：
 
 ---
-{% asset_img invite-email.jpeg invite-email %}
+![invite-email](./a-cheating-experience/invite-email.jpeg)
 
 ---
 
@@ -24,7 +24,7 @@ tags:
 QQ群的图是后面补的，人数已经减少到8个了，大概率只剩骗子团队自己人了，接下来可能会再拉一波新人，也可能会解散掉换个新群继续套路。
 
 ---
-{% asset_img qq-group.jpeg qq-group %}
+![qq-group](./a-cheating-experience/qq-group.jpeg)
 
 ---
 
@@ -35,14 +35,14 @@ QQ群的图是后面补的，人数已经减少到8个了，大概率只剩骗�
 
 ||||
 |----|----|----|
-|{% asset_img app-download.jpeg app-download %}| <span style="white-space:nowrap;">>></span> |{% asset_img app-main-page.png app-main-page %}|
+|![app-download](./a-cheating-experience/app-download.jpeg)| <span style="white-space:nowrap;">>></span> |![app-main-page](./a-cheating-experience/app-main-page.png)|
 
 
 App安装好后，大致可以说是一个聊天软件，基本结构和微信一致，最左侧Tab页是聊天列表，注册完成后通知原先QQ群的管理员，他会在后台操作在App上给你安排一个派单员以及拉到一个发任务和晒佣金的大群里。同时，QQ群的诈骗使命完成了，管理员会立即把你移除出去，这样也可以避免后续有人真被骗了会回到QQ群里闹。
 
 ---
 
-{% asset_img qq-group-exit.jpeg qq-group-exit %}
+![qq-group-exit](./a-cheating-experience/qq-group-exit.jpeg)
 
 ---
 
@@ -52,7 +52,7 @@ App安装好后，大致可以说是一个聊天软件，基本结构和微信�
 
 |||
 |----|----|
-|{% asset_img app-group-announcement.png app-group-announcement %}|{% asset_img app-group-jd.png app-group-jd %}|
+|![app-group-announcement](./a-cheating-experience/app-group-announcement.png)|![app-group-jd](./a-cheating-experience/app-group-jd.png)|
 
 
 我顺利地做完了3单抖音关注点赞任务，期间没有任何插曲。然后派单员开始了下一步行动，告诉我今日抖音3单任务已经做完，想要继续请做其他任务，接着给我发来了京东任务派单员的账号，我需要在App里添加京东派单员。
@@ -73,14 +73,15 @@ https://item.jd.com/10051126000749.html
 ```
 
 ---
-{% asset_img jd-link.jpeg jd-link %}
+{% asset_img  jd-link %}
+![jd-link](./a-cheating-experience/jd-link.jpeg)
 
 ---
 
 为了打消我的疑虑，骗子发了正规平台链接，待我把商品加到购物车后，骗子发来一个微信支付二维码，扫码后显示是腾讯云服务的支付订单：
 
 ---
-{% asset_img wechat-order.jpeg wechat-order %}
+![wechat-order](./a-cheating-experience/wechat-order.jpeg)
 
 ---
 
@@ -96,13 +97,13 @@ https://item.jd.com/10051126000749.html
 
 |||
 |----|----|
-|![app-chat-ending](./app-chat-ending.png)|![app-account-blocked](./app-account-blocked.png)|
+|![app-chat-ending](./a-cheating-experience/app-chat-ending.png)|![app-account-blocked](./a-cheating-experience/app-account-blocked.png)|
 
 #### 总结
 今日收益12元，一份盒饭到手！
 
 ---
-![payment-list](./payment-list.jpeg)
+![payment-list](./a-cheating-experience/payment-list.jpeg)
 
 ---
 
