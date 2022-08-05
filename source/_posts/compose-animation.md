@@ -331,7 +331,7 @@ AnimatedContent(
 除了上述的三个动画场景，官方文档还有其他API可供参考：
 
 ---
-![animation-flowchart](./compose-animation/animation-flowchart.svg)
+![animation-flowchart](./compose-animation/animation-flowchart.png)
 
 ---
 
