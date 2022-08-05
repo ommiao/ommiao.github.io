@@ -73,7 +73,6 @@ https://item.jd.com/10051126000749.html
 ```
 
 ---
-{% asset_img  jd-link %}
 ![jd-link](./a-cheating-experience/jd-link.jpeg)
 
 ---

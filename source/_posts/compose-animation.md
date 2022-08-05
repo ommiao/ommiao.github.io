@@ -47,7 +47,7 @@ Box(modifier = Modifier.offset(x = animateXOffset))
 接下来只需要改变目标状态，就可以看到下面的动画效果了：
 
 ---
-{% asset_img demo-animate-dp-as-state-1.gif demo-animate-dp-as-state-1 %}
+![demo-animate-dp-as-state-1](./compose-animation/demo-animate-dp-as-state-1.gif)
 
 ---
 
@@ -56,13 +56,13 @@ Box(modifier = Modifier.offset(x = animateXOffset))
 1. 动画执行到中间状态，可以变更目标状态，比如执行从左侧到右侧的Offset动画时，中途将目标位置改为左侧即回到初始状态，我们不需要做任何处理，效果如下：
 
 ---
-{% asset_img demo-animate-dp-as-state-2.gif demo-animate-dp-as-state-2 %}
+![demo-animate-dp-as-state-2](./compose-animation/demo-animate-dp-as-state-2.gif)
 
 ---
 
 2. 动画过程中View由于重组被销毁了，也不需要做任何处理，也不会引发任何异常：
 ---
-{% asset_img demo-animate-dp-as-state-3.gif demo-animate-dp-as-state-3 %}
+![demo-animate-dp-as-state-3](./compose-animation/demo-animate-dp-as-state-3.gif)
 
 ---
 
@@ -94,14 +94,14 @@ animationSpec: AnimationSpec<Dp> = dpDefaultSpring, finishedListener: ((Dp) -> U
 > 以固定时间间隔刷新进度，如间隔1s按照以下百分比刷新：0.1f, 0.25f, 0.44f, 0.65f, 0.7f, 0.8f, 0.95f, 1.0f
 
 ---
-{% asset_img demo-animate-dp-as-state-4.gif demo-animate-dp-as-state-4 %}
+![demo-animate-dp-as-state-4](./compose-animation/demo-animate-dp-as-state-4.gif)
 
 ---
 
 ###### Animation Chain
 > 一组View依次进行相同的动画
 ---
-{% asset_img demo-animate-dp-as-state-5.gif demo-animate-dp-as-state-5 %}
+![demo-animate-dp-as-state-5](./compose-animation/demo-animate-dp-as-state-5.gif)
 
 ---
 
@@ -111,14 +111,14 @@ animationSpec: AnimationSpec<Dp> = dpDefaultSpring, finishedListener: ((Dp) -> U
 最初我非常天真地以为颜色渐变就是动态改变16进制颜色值，也就是按照整型将初始值逐渐更新到目标值，得到了如下闪瞎眼的动画效果：
 
 ---
-{% asset_img demo-animate-color-as-state-1.gif demo-animate-color-as-state-1 %}
+![demo-animate-color-as-state-1](./compose-animation/demo-animate-color-as-state-1.gif)
 
 ---
 
 而`animateColorAsState`实现的则是我们预期的效果：
 
 ---
-{% asset_img demo-animate-color-as-state-2.gif demo-animate-color-as-state-2 %}
+![demo-animate-color-as-state-2](./compose-animation/demo-animate-color-as-state-2.gif)
 
 ---
 
@@ -168,14 +168,14 @@ fun AnimatedVisibility(
 6. expandH/V / shrinkH/V
 
 ---
-{% asset_img demo-animate-visibility-1.gif demo-animate-visibility-1 %}
+![demo-animate-visibility-1](./compose-animation/demo-animate-visibility-1.gif)
 
 ---
 
 通过动画效果预览，我们可以看出绝大部分的动画过程，但有个不易察觉的地方需要注意，`slide`和`expand`的效果乍一看是一样的，但其实`slide`在执行时不会动态改变容器的Size，而`expand`在执行时容器的Size是动态改变的，请看如下的对比：
 
 ---
-{% asset_img demo-animate-visibility-2.gif demo-animate-visibility-2 %}
+![demo-animate-visibility-2](./compose-animation/demo-animate-visibility-2.gif)
 
 ---
 
@@ -224,7 +224,7 @@ Crossfade(
 这段代码实现了`Loading`、`Success`和`Error`状态的渐变切换：
 
 ---
-{% asset_img demo-crossfade.gif demo-crossfade %}
+![demo-crossfade](./compose-animation/demo-crossfade.gif)
 
 ---
 
@@ -265,7 +265,7 @@ AnimatedContent(
 这段代码里只有一个`Text`，并没有明显的View切换，但当`count`变化时，`Text`会重新绘制，这种情况也可以理解为View发生了切换，看看动画效果就更容易理解了：
 
 ---
-{% asset_img demo-animated-content-1.gif demo-animated-content-1 %}
+![demo-animated-content-1](./compose-animation/demo-animated-content-1.gif)
 
 ---
 
@@ -315,7 +315,7 @@ AnimatedContent(
 分析一下，首先当前UI的退出动画是`fadeOut`，新UI的进入动画是`fadeIn`，此外Size的变化是如果`expanded=true`，则先将宽度变化到目标值而高度不变，反之`expanded=false`则先将高度变化到目标值而宽度不变：
 
 ---
-{% asset_img demo-animated-content-2.gif demo-animated-content-2 %}
+![demo-animated-content-2](./compose-animation/demo-animated-content-2.gif)
 
 ---
 
@@ -331,7 +331,7 @@ AnimatedContent(
 除了上述的三个动画场景，官方文档还有其他API可供参考：
 
 ---
-{% asset_img animation-flowchart.svg animation-flowchart %}
+![animation-flowchart](./compose-animation/animation-flowchart.svg)
 
 ---
 
