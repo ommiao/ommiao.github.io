@@ -20,43 +20,26 @@
         <div class="paper">
             <div class="paper-main">
                 
-                    <div class="header">
+                    <div class="post-header">
     <a class="logo" href="/">oMMiao's Blog</a>
-    <ul class="nav">
-        
-        <li><a href="/">首页</a></li>
-        
-        <li><a href="/archives">归档</a></li>
-        
-        <li><a href="/notes">笔记</a></li>
-        
-        <li><a href="/about">关于</a></li>
-        
-    </ul>
+    <a class="go-home" href="/">
+        <svg width="8" height="14" viewBox="0 0 8 14">
+            <path d="M7 1L1 7l6 6" stroke="#000" stroke-width="2" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+    </a>
 </div>
                 
-                <div class="archive-list">
-    <ul class="archive">
-        
-        <li>
-            <span class="archive-date">2022.07.24</span>
-            <div class="archive-main">
-                <a class="archive-title" href="/2022/07/24/a-cheating-experience/">记一次被骗经历</a>
-                <!-- <a class="read-more" href="/2022/07/24/a-cheating-experience/"> ... </a> -->
-            </div>
-        </li>
-        
-        <li>
-            <span class="archive-date">2022.07.09</span>
-            <div class="archive-main">
-                <a class="archive-title" href="/2022/07/09/compose-animation/">Compose Animation实践</a>
-                <!-- <a class="read-more" href="/2022/07/09/compose-animation/"> ... </a> -->
-            </div>
-        </li>
-        
-    </ul>
-</div>
+                <div class="post-main">
 
+    
+
+    <div class="post-md">
+        <h2 id="Git命令"><a href="#Git命令" class="headerlink" title="Git命令"></a>Git命令</h2><h5 id="1-delete-all-local-branches"><a href="#1-delete-all-local-branches" class="headerlink" title="1. delete all local branches"></a>1. delete all local branches</h5><pre><code class="shell">git branch --merged | grep -v \* | xargs git branch -D
+</code></pre>
+
+    </div>
+
+</div>
                 <div class="footer">
     <span>Copyright © 2022 oMMiao's Blog</span>
     <span>Powered By Hexo &amp; ZheLi</span>
