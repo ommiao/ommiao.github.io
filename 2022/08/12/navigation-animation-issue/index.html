@@ -1,0 +1,590 @@
+<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
+    <link rel="alternate icon" type="image/png" href="/img/favicon.png">
+    <title>oMMiao's Blog</title>
+    
+<link rel="stylesheet" href="/css/reset.css">
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    
+<link rel="stylesheet" href="/css/markdown.css">
+
+    
+<link rel="stylesheet" href="/css/fonts.css">
+
+<meta name="generator" content="Hexo 6.2.0"></head>
+    <body>
+        <div class="paper">
+            <div class="paper-main">
+                
+                    <div class="post-header">
+    <a class="logo" href="/">oMMiao's Blog</a>
+    <a class="go-home" href="/">
+        <svg width="8" height="14" viewBox="0 0 8 14">
+            <path d="M7 1L1 7l6 6" stroke="#000" stroke-width="2" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+    </a>
+</div>
+                
+                <div class="post-main">
+
+    
+        <div class="post-main-title">
+            给Compose官方修个小Bug
+        </div>
+        <div class="post-meta">
+            2022-08-12
+        </div>
+    
+
+    <div class="post-md">
+        <p>Jetpack Compose在正式版本中提供了Navigation功能，但并不支持页面切换动画，生硬的页面过渡过渡效果基本劝退了使用者。好在Google官方同时还在维护另外一个<a target="_blank" rel="noopener" href="https://google.github.io/accompanist/">Accompanist支持库</a>，这个库包括一些复杂Feature的Compose版本实现，在这些Feature迭代稳定之后，会直接集成到Compose核心Library中，比如Window Inset的控制，早期在Accompanist中就有实现，但在最新版本中已经标为废弃，原因就是已经集成到Compose核心库中。<br>今天的主角是Accompanist Library里的<a target="_blank" rel="noopener" href="https://google.github.io/accompanist/navigation-animation/">Navigation Animation</a>。顾名思义，也就是带有动画效果的Navigation。</p>
+<p><strong>本篇文章基于Accompanist v0.26.1-alpha版本，可能随时失效。</strong></p>
+<h4 id="一、发现问题"><a href="#一、发现问题" class="headerlink" title="一、发现问题"></a>一、发现问题</h4><p>在刚接触到Navigation Animation的时候，就发现设置的动画效果有些不对劲儿，但当时以为是动画属性设置问题，影响不大，没有深究。最近使用Navigation时又注意到这个奇怪的动画效果，并且在查阅文档之后确信我设置的参数完全正确，所以就想探究一下问题到底出在哪里。</p>
+<p>Navigation Animation的基本用法如下：</p>
+<pre><code class="kotlin">AnimatedNavHost(
+    navController = rememberAnimatedNavController(),
+    startDestination = "A",
+    enterTransition = {...},
+    exitTransition = {...},
+    popEnterTransition = {...},
+    popExitTransition = {...}
+) {
+    composable(route = "A") {...}
+    composable(route = "B") {...}
+}
+</code></pre>
+<p>可以看到，AnimatedNavHost有4个动画相关的参数，这里我们设置了起始路由是A，所有可到达路由为A、B，假设场景是A跳转到B，然后执行popStack退回到A，那么动画的执行过程如下：</p>
+<ul>
+<li>enterTransition，A跳转到B时，B会执行</li>
+<li>exitTransition，A跳转到B时，A会执行</li>
+<li>popEnterTransition，B退回A时，A会执行</li>
+<li>popExitTransition，B退回A时，B会执行</li>
+</ul>
+<p>了解清楚每个动画的含义后，我想实现的动画效果是这样的：</p>
+<ul>
+<li>A跳转到B时，B完全从右侧屏幕外移入</li>
+<li>A跳转到B时，A向左移出屏幕50%</li>
+<li>B退回A时，A从屏幕左侧外50%处移入</li>
+<li>B退回A时，B向右完全移出屏幕外</li>
+</ul>
+<p>根据上面的参数说明，很容易就可以得出下面的实现代码：</p>
+<pre><code class="kotlin">AnimatedNavHost(
+    navController = rememberAnimatedNavController(),
+    startDestination = "A",
+    enterTransition = {
+        slideIntoContainer(
+            towards = AnimatedContentScope.SlideDirection.Left,
+            animationSpec = tween(1000)
+        )
+    },
+    exitTransition = {
+        slideOutOfContainer(
+            towards = AnimatedContentScope.SlideDirection.Left,
+            animationSpec = tween(1000),
+            targetOffset = { it / 2 }
+        )
+    },
+    popEnterTransition = {
+        slideIntoContainer(
+            towards = AnimatedContentScope.SlideDirection.Right,
+            animationSpec = tween(1000),
+            initialOffset = { it / 2 }
+        )
+    },
+    popExitTransition = {
+        slideOutOfContainer(
+            towards = AnimatedContentScope.SlideDirection.Right,
+            animationSpec = tween(1000)
+        )
+    }
+) {
+    composable(route = "A") { ScreenA() }
+    composable(route = "B") { ScreenB() }
+}
+</code></pre>
+<p>效果演示：</p>
+<hr>
+
+    <div>
+      <img src="navigation-animation-issue.gif" alt="动画遮盖问题演示" data-action="zoom" class="photozoom">
+      
+    </div>
+<hr>
+<p>仔细观察，可以看到A在向左退出时是在B的下层，但在B退回A的时候，A却盖在了B的上层，层级发生了错乱。</p>
+<h4 id="二、原因分析"><a href="#二、原因分析" class="headerlink" title="二、原因分析"></a>二、原因分析</h4><p><code>AnimatedNavHost</code>是所有路由页面的Container，并且动画相关属性也是通过它来设置，那么问题一定出在AnimatedNavHost内部。</p>
+<p>在Clone<a target="_blank" rel="noopener" href="https://github.com/google/accompanist">官方Accompanist源码</a>后，惊喜地发现AnimatedNavHost内部实现基于AnimatedContent，关于AnimatedContent可以在<a href="/2022/07/09/compose-animation/" title="Compose Animation">Compose Animation</a>这篇文章进行了解。</p>
+<p>AnimatedContent接收的<code>ContentTransform</code>除了支持动画自定义之外，还支持设置<code>targetContentZIndex</code>，也就是可以自定义每个页面的层级，默认每个页面的targetContentZIndex为0，并且实际效果是进入页面在上层，退出页面在下层，也就是上面演示的动画效果。</p>
+<p>到这里问题原因就非常清楚了，AnimatedNavHost没有设置AnimatedContent里每个页面的zIndex。</p>
+<h4 id="三、解决方案"><a href="#三、解决方案" class="headerlink" title="三、解决方案"></a>三、解决方案</h4><p><strong>完整内容请见<a target="_blank" rel="noopener" href="https://github.com/google/accompanist/pull/1282">Pull Request</a>。</strong></p>
+<h5 id="1-增加contentZIndex参数"><a href="#1-增加contentZIndex参数" class="headerlink" title="1. 增加contentZIndex参数"></a>1. 增加contentZIndex参数</h5><p>因为每个页面需要控制自己的zIndex，因此需要通过AnimatedContent里的<code>composable(...)</code>来设置contentZIndex，<code>composable(...)</code>接收到zIndex后，存储在contentZIndices map里，如下：</p>
+<pre><code class="kotlin">// 原始代码保存动画的逻辑
+enterTransition?.let { enterTransitions[route] = enterTransition }
+exitTransition?.let { exitTransitions[route] = exitTransition }
+popEnterTransition?.let { popEnterTransitions[route] = popEnterTransition }
+popExitTransition?.let { popExitTransitions[route] = popExitTransition }
+// 下面是新增的保存zIndex的逻辑
+contentZIndices[route] = contentZIndex
+</code></pre>
+<p>这里参考了动画的存储方案，每种动画都存在以route为key的map里：</p>
+<pre><code class="kotlin">// 原始代码存储动画的map
+@ExperimentalAnimationApi
+internal val enterTransitions =
+    mutableMapOf&lt;String?,
+        (AnimatedContentScope&lt;NavBackStackEntry&gt;.() -&gt; EnterTransition?)?&gt;()
+@ExperimentalAnimationApi
+internal val exitTransitions =
+    mutableMapOf&lt;String?, (AnimatedContentScope&lt;NavBackStackEntry&gt;.() -&gt; ExitTransition?)?&gt;()
+@ExperimentalAnimationApi
+internal val popEnterTransitions =
+    mutableMapOf&lt;String?, (AnimatedContentScope&lt;NavBackStackEntry&gt;.() -&gt; EnterTransition?)?&gt;()
+@ExperimentalAnimationApi
+internal val popExitTransitions =
+    mutableMapOf&lt;String?, (AnimatedContentScope&lt;NavBackStackEntry&gt;.() -&gt; ExitTransition?)?&gt;()
+// 下面是新添加的存储zIndex的map
+@ExperimentalAnimationApi
+internal val contentZIndices = mutableMapOf&lt;String?, Float&gt;()
+</code></pre>
+<h5 id="2-传递contentZIndex"><a href="#2-传递contentZIndex" class="headerlink" title="2. 传递contentZIndex"></a>2. 传递contentZIndex</h5><p>由于原始代码比较复杂，所以不太方便描述具体的改动，大致的思路就是按照route从map中取出对应的<code>zIndex</code>，然后将其设置给AnimatedContent，具体实现请参考<a target="_blank" rel="noopener" href="https://github.com/google/accompanist/pull/1282">Pull Request</a>。</p>
+<h5 id="3-效果测试"><a href="#3-效果测试" class="headerlink" title="3. 效果测试"></a>3. 效果测试</h5><p>在原先的Navigation实现代码增加zIndex参数：</p>
+<pre><code class="kotlin">AnimatedNavHost(
+    navController = rememberAnimatedNavController(),
+    startDestination = "A",
+    enterTransition = {...},
+    exitTransition = {...},
+    popEnterTransition = {...},
+    popExitTransition = {...}
+) {
+    composable(route = "A", contenZIndex = 0f) { ScreenA() }
+    composable(route = "B", contenZIndex = 1f) { ScreenB() }
+}
+</code></pre>
+<p>效果演示：</p>
+<hr>
+
+    <div>
+      <img src="navigation-animation-fixed.gif" alt="动画问题修复演示" data-action="zoom" class="photozoom">
+      
+    </div>
+<hr>
+<h4 id="四、写在最后"><a href="#四、写在最后" class="headerlink" title="四、写在最后"></a>四、写在最后</h4><p>已经在Accompanist提交了<a target="_blank" rel="noopener" href="https://github.com/google/accompanist/pull/1282">PR</a>，或许在某天会被采纳。如果你正在寻找快速的解决方案，一个简单的办法是复制Accompanist里Navigation的实现，共有4个文件，然后按照<a target="_blank" rel="noopener" href="https://github.com/google/accompanist/pull/1282">PR</a>进行一些改动，总耗时大概5分钟。</p>
+
+    </div>
+
+</div>
+                <div class="footer">
+    <span>Copyright © 2022 oMMiao's Blog</span>
+    <span>Powered By Hexo &amp; ZheLi</span>
+</div>
+
+
+<link rel="stylesheet" href="/css/a11y-dark.min.css">
+
+
+<script src="/js/highlight.min.js"></script>
+
+
+<script src="/js/highlightjs-line-numbers.js"></script>
+
+
+<script>
+    hljs.initHighlightingOnLoad();
+    hljs.initLineNumbersOnLoad();
+</script>
+
+            </div>
+        </div>
+    
+<script type="text/javascript">/**
+ * Pure JavaScript implementation of zoom.js.
+ *
+ * Original preamble:
+ * zoom.js - It's the best way to zoom an image
+ * @version v0.0.2
+ * @link https://github.com/fat/zoom.js
+ * @license MIT
+ *
+ * This is a fork of the original zoom.js implementation by @fat.
+ * Copyrights for the original project are held by @fat. All other copyright
+ * for changes in the fork are held by Nishanth Shanmugham.
+ *
+ * Copyright (c) 2013 @fat
+ * The MIT License. Copyright © 2016 Nishanth Shanmugham.
+ */
+(function() {
+    "use strict";
+    var _createClass = function() {
+        function defineProperties(target, props) {
+            for (var i = 0; i < props.length; i++) {
+                var descriptor = props[i];
+                descriptor.enumerable = descriptor.enumerable || false;
+                descriptor.configurable = true;
+                if ("value" in descriptor) descriptor.writable = true;
+                Object.defineProperty(target, descriptor.key, descriptor);
+            }
+        }
+        return function(Constructor, protoProps, staticProps) {
+            if (protoProps) defineProperties(Constructor.prototype, protoProps);
+            if (staticProps) defineProperties(Constructor, staticProps);
+            return Constructor;
+        };
+    }();
+    function _classCallCheck(instance, Constructor) {
+        if (!(instance instanceof Constructor)) {
+            throw new TypeError("Cannot call a class as a function");
+        }
+    }
+    (function(modules) {
+        var installedModules = {};
+        function __webpack_require__(moduleId) {
+            if (installedModules[moduleId]) return installedModules[moduleId].exports;
+            var module = installedModules[moduleId] = {
+                i: moduleId,
+                l: false,
+                exports: {}
+            };
+            modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+            module.l = true;
+            return module.exports;
+        }
+        __webpack_require__.m = modules;
+        __webpack_require__.c = installedModules;
+        __webpack_require__.i = function(value) {
+            return value;
+        };
+        __webpack_require__.d = function(exports, name, getter) {
+            if (!__webpack_require__.o(exports, name)) {
+                Object.defineProperty(exports, name, {
+                    configurable: false,
+                    enumerable: true,
+                    get: getter
+                });
+            }
+        };
+        __webpack_require__.n = function(module) {
+            var getter = module && module.__esModule ? function getDefault() {
+                return module["default"];
+            } : function getModuleExports() {
+                return module;
+            };
+            __webpack_require__.d(getter, "a", getter);
+            return getter;
+        };
+        __webpack_require__.o = function(object, property) {
+            return Object.prototype.hasOwnProperty.call(object, property);
+        };
+        __webpack_require__.p = "";
+        return __webpack_require__(__webpack_require__.s = 3);
+    })([ function(module, exports, __webpack_require__) {
+        "use strict";
+        __webpack_require__.d(exports, "a", function() {
+            return windowWidth;
+        });
+        __webpack_require__.d(exports, "b", function() {
+            return windowHeight;
+        });
+        __webpack_require__.d(exports, "c", function() {
+            return elemOffset;
+        });
+        __webpack_require__.d(exports, "d", function() {
+            return once;
+        });
+        var windowWidth = function windowWidth() {
+            return document.documentElement.clientWidth;
+        };
+        var windowHeight = function windowHeight() {
+            return document.documentElement.clientHeight;
+        };
+        var elemOffset = function elemOffset(elem) {
+            var rect = elem.getBoundingClientRect();
+            var docElem = document.documentElement;
+            var win = window;
+            return {
+                top: rect.top + win.pageYOffset - docElem.clientTop,
+                left: rect.left + win.pageXOffset - docElem.clientLeft
+            };
+        };
+        var once = function once(elem, type, handler) {
+            var fn = function fn(e) {
+                e.target.removeEventListener(type, fn);
+                handler();
+            };
+            elem.addEventListener(type, fn);
+        };
+    }, function(module, exports, __webpack_require__) {
+        "use strict";
+        var __WEBPACK_IMPORTED_MODULE_0__zoom_image_js__ = __webpack_require__(2);
+        var __WEBPACK_IMPORTED_MODULE_1__utils_js__ = __webpack_require__(0);
+        __webpack_require__.d(exports, "a", function() {
+            return zoom;
+        });
+        var current = null;
+        var offset = 80;
+        var initialScrollPos = -1;
+        var initialTouchPos = -1;
+        var setup = function setup(elem) {
+            elem.addEventListener("click", prepareZoom);
+        };
+        var prepareZoom = function prepareZoom(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (document.body.classList.contains("zoom-overlay-open")) {
+                return;
+            }
+            if (e.metaKey || e.ctrlKey) {
+                window.open(e.target.getAttribute("data-original") || e.target.src, "_blank");
+                return;
+            }
+            if (e.target.width >= __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__utils_js__["a"])() - offset) {
+                return;
+            }
+            closeCurrent(true);
+            current = new __WEBPACK_IMPORTED_MODULE_0__zoom_image_js__["a"](e.target, offset);
+            current.zoom();
+            addCloseListeners();
+        };
+        var closeCurrent = function closeCurrent(force) {
+            if (current == null) {
+                return;
+            }
+            if (force) {
+                current.dispose();
+            } else {
+                current.close();
+            }
+            removeCloseListeners();
+            current = null;
+        };
+        var addCloseListeners = function addCloseListeners() {
+            document.addEventListener("scroll", handleScroll);
+            document.addEventListener("keyup", handleKeyup);
+            document.addEventListener("touchstart", handleTouchStart);
+            document.addEventListener("click", handleClick, true);
+        };
+        var removeCloseListeners = function removeCloseListeners() {
+            document.removeEventListener("scroll", handleScroll);
+            document.removeEventListener("keyup", handleKeyup);
+            document.removeEventListener("touchstart", handleTouchStart);
+            document.removeEventListener("click", handleClick, true);
+        };
+        var handleScroll = function handleScroll() {
+            if (initialScrollPos == -1) {
+                initialScrollPos = window.pageYOffset;
+            }
+            var deltaY = Math.abs(initialScrollPos - window.pageYOffset);
+            if (deltaY >= 40) {
+                closeCurrent();
+            }
+        };
+        var handleKeyup = function handleKeyup(e) {
+            if (e.keyCode == 27) {
+                closeCurrent();
+            }
+        };
+        var handleTouchStart = function handleTouchStart(e) {
+            var t = e.touches[0];
+            if (t == null) {
+                return;
+            }
+            initialTouchPos = t.pageY;
+            e.target.addEventListener("touchmove", handleTouchMove);
+        };
+        var handleTouchMove = function handleTouchMove(e) {
+            var t = e.touches[0];
+            if (t == null) {
+                return;
+            }
+            if (Math.abs(t.pageY - initialTouchPos) > 10) {
+                closeCurrent();
+                e.target.removeEventListener("touchmove", handleTouchMove);
+            }
+        };
+        var handleClick = function handleClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeCurrent();
+        };
+        var zoom = Object.create(null);
+        zoom.setup = setup;
+    }, function(module, exports, __webpack_require__) {
+        "use strict";
+        var __WEBPACK_IMPORTED_MODULE_0__utils_js__ = __webpack_require__(0);
+        var Size = function Size(w, h) {
+            _classCallCheck(this, Size);
+            this.w = w;
+            this.h = h;
+        };
+        var ZoomImage = function() {
+            function ZoomImage(img, offset) {
+                _classCallCheck(this, ZoomImage);
+                this.img = img;
+                this.preservedTransform = img.style.transform;
+                this.wrap = null;
+                this.overlay = null;
+                this.offset = offset;
+            }
+            _createClass(ZoomImage, [ {
+                key: "forceRepaint",
+                value: function forceRepaint() {
+                    var _ = this.img.offsetWidth;
+                    return;
+                }
+            }, {
+                key: "zoom",
+                value: function zoom() {
+                    var size = new Size(this.img.naturalWidth, this.img.naturalHeight);
+                    this.wrap = document.createElement("div");
+                    this.wrap.classList.add("zoom-img-wrap");
+                    this.img.parentNode.insertBefore(this.wrap, this.img);
+                    this.wrap.appendChild(this.img);
+                    this.img.classList.add("zoom-img");
+                    this.img.setAttribute("data-action", "zoom-out");
+                    this.overlay = document.createElement("div");
+                    this.overlay.classList.add("zoom-overlay");
+                    this.caption = document.createElement("span");
+                    this.caption.innerHTML = this.img.getAttribute("alt");
+                    this.caption.classList.add("zoom-caption");
+                    this.overlay.appendChild(this.caption);
+                    document.body.appendChild(this.overlay);
+                    this.forceRepaint();
+                    var scale = this.calculateScale(size);
+                    this.forceRepaint();
+                    this.animate(scale);
+                    document.body.classList.add("zoom-overlay-open");
+                }
+            }, {
+                key: "calculateScale",
+                value: function calculateScale(size) {
+                    var maxScaleFactor = size.w / this.img.width;
+                    var viewportWidth = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["a"])() - this.offset;
+                    var viewportHeight = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["b"])() - this.offset;
+                    var imageAspectRatio = size.w / size.h;
+                    var viewportAspectRatio = viewportWidth / viewportHeight;
+                    if (size.w < viewportWidth && size.h < viewportHeight) {
+                        return maxScaleFactor;
+                    } else if (imageAspectRatio < viewportAspectRatio) {
+                        return viewportHeight / size.h * maxScaleFactor;
+                    } else {
+                        return viewportWidth / size.w * maxScaleFactor;
+                    }
+                }
+            }, {
+                key: "animate",
+                value: function animate(scale) {
+                    var imageOffset = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["c"])(this.img);
+                    var scrollTop = window.pageYOffset;
+                    var viewportX = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["a"])() / 2;
+                    var viewportY = scrollTop + __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["b"])() / 2;
+                    var imageCenterX = imageOffset.left + this.img.width / 2;
+                    var imageCenterY = imageOffset.top + this.img.height / 2;
+                    var tx = viewportX - imageCenterX;
+                    var ty = viewportY - imageCenterY;
+                    var tz = 0;
+                    var imgTr = "scale(" + scale + ")";
+                    var wrapTr = "translate3d(" + tx + "px, " + ty + "px, " + tz + "px)";
+                    this.img.style.transform = imgTr;
+                    this.wrap.style.transform = wrapTr;
+                }
+            }, {
+                key: "dispose",
+                value: function dispose() {
+                    if (this.wrap == null || this.wrap.parentNode == null) {
+                        return;
+                    }
+                    this.img.classList.remove("zoom-img");
+                    this.img.setAttribute("data-action", "zoom");
+                    this.wrap.parentNode.insertBefore(this.img, this.wrap);
+                    this.wrap.parentNode.removeChild(this.wrap);
+                    document.body.removeChild(this.overlay);
+                    document.body.classList.remove("zoom-overlay-transitioning");
+                }
+            }, {
+                key: "close",
+                value: function close() {
+                    var _this = this;
+                    document.body.classList.add("zoom-overlay-transitioning");
+                    this.img.style.transform = this.preservedTransform;
+                    if (this.img.style.length === 0) {
+                        this.img.removeAttribute("style");
+                    }
+                    this.wrap.style.transform = "none";
+                    __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["d"])(this.img, "transitionend", function() {
+                        _this.dispose();
+                        document.body.classList.remove("zoom-overlay-open");
+                    });
+                }
+            } ]);
+            return ZoomImage;
+        }();
+        exports["a"] = ZoomImage;
+    }, function(module, exports, __webpack_require__) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", {
+            value: true
+        });
+        var __WEBPACK_IMPORTED_MODULE_0__src_zoom_js__ = __webpack_require__(1);
+        document.addEventListener("DOMContentLoaded", function() {
+            var elems = document.querySelectorAll("img[data-action='zoom']");
+            for (var i = 0; i < elems.length; i++) {
+                __WEBPACK_IMPORTED_MODULE_0__src_zoom_js__["a"].setup(elems[i]);
+            }
+        });
+    } ]);
+})();
+</script><style>img[data-action="zoom"] {
+  cursor: pointer;
+  cursor: -webkit-zoom-in;
+  cursor: -moz-zoom-in;
+}
+.zoom-img,
+.zoom-img-wrap {
+  position: relative;
+  z-index: 666;
+  -webkit-transition: all 300ms;
+       -o-transition: all 300ms;
+          transition: all 300ms;
+}
+img.zoom-img {
+  cursor: pointer;
+  cursor: -webkit-zoom-out;
+  cursor: -moz-zoom-out;
+}
+.zoom-overlay {
+  z-index: 420;
+  background: #000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  filter: "alpha(opacity=0)";
+  opacity: 0;
+  text-align: center;
+  -webkit-transition:      opacity 300ms ease-in-out;
+       -o-transition:      opacity 300ms ease-in-out;
+          transition:      opacity 300ms ease-in-out;
+}
+.zoom-overlay-open .zoom-overlay {
+  filter: "alpha(opacity=100)";
+  opacity: 1;
+}
+.zoom-overlay-open,
+.zoom-overlay-transitioning {
+  cursor: default;
+}
+.zoom-overlay-transitioning .zoom-overlay {
+  opacity: 0;
+}
+.zoom-caption {
+    z-index:667;
+    bottom:10px;
+    position:fixed;
+    left:10px;
+    right:10px;
+    color:#fff;
+}
+</style></body></html>
