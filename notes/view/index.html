@@ -44,17 +44,19 @@
 
 &lt;/com.google.android.material.textfield.TextInputLayout&gt;
 </code></pre>
-<p>预览图：</p>
+<p>default：</p>
 
     <div>
       <img src="text-input-default.png" alt="default" data-action="zoom" class="photozoom">
       
     </div>
+<p>focused：</p>
 
     <div>
       <img src="text-input-focused.png" alt="focused" data-action="zoom" class="photozoom">
       
     </div>
+<p>typed:</p>
 
     <div>
       <img src="text-input-typed.png" alt="typed" data-action="zoom" class="photozoom">
@@ -75,6 +77,19 @@
         android:theme="@style/ColoredHandleTheme"/&gt;
 
 &lt;/com.google.android.material.textfield.TextInputLayout&gt;
+</code></pre>
+<h5 id="2-TextView"><a href="#2-TextView" class="headerlink" title="2. TextView"></a>2. TextView</h5><h6 id="设置lineHeight-多行文字"><a href="#设置lineHeight-多行文字" class="headerlink" title="设置lineHeight-多行文字"></a>设置lineHeight-多行文字</h6><pre><code class="xml">&lt;TextView
+    ...
+    android:textSize="16sp"
+    android:lineSpacingMultiplier="0"
+    android:lineSpacingExtra="24sp" /&gt;
+</code></pre>
+<h6 id="设置lineHeight-单行文字"><a href="#设置lineHeight-单行文字" class="headerlink" title="设置lineHeight-单行文字"></a>设置lineHeight-单行文字</h6><p>根据Google官方文档解释，文字最后一行<code>lineSpacingExtra</code>不生效，因此单行文字也不生效，所以可以通过以下方式设置：</p>
+<pre><code class="xml">&lt;TextView
+    ...
+    android:layout_width="24sp"
+    android:gravity="center_vertical"
+    android:textSize="16sp" /&gt;
 </code></pre>
 
     </div>
