@@ -3,6 +3,7 @@ title: 给Compose官方修个小Bug
 date: 2022-08-12 23:02:14
 tags:
 ---
+##### 2022.09.11重要更新请见[文末](#update-20220911)。
 
 Jetpack Compose在正式版本中提供了Navigation功能，但并不支持页面切换动画，生硬的页面过渡效果基本劝退了使用者。好在Google官方同时还在维护另外一个[Accompanist支持库](https://google.github.io/accompanist/)，这个库包括一些复杂Feature的Compose版本实现，在这些Feature迭代稳定之后，会直接集成到Compose核心Library中，比如Window Inset的控制，早期在Accompanist中就有实现，但在最新版本中已经标为废弃，原因就是已经集成到Compose核心库中。
 今天的主角是Accompanist Library里的[Navigation Animation](https://google.github.io/accompanist/navigation-animation/)。顾名思义，也就是带有动画效果的Navigation。
@@ -90,7 +91,7 @@ AnimatedNavHost(
 
 在Clone[官方Accompanist源码](https://github.com/google/accompanist)后，惊喜地发现AnimatedNavHost内部实现基于AnimatedContent，关于AnimatedContent可以在{% post_link compose-animation Compose Animation %}这篇文章进行了解。
 
-AnimatedContent接收的`ContentTransform`除了支持动画自定义之外，还支持设置`targetContentZIndex`，也就是可以自定义每个页面的层级，默认每个页面的targetContentZIndex为0，并且实际效果是将要进入的页面在上层，将要退出的页面在下层，也就是上面演示的动画效果。
+AnimatedContent接收的`ContentTransform`除了支持动画自定义之外，还支持设置`targetContentZIndex`，也就是可以自定义每个页面的层级，默认每个页面的targetContentZIndex为0，并且实际效果是**将要进入的页面在上层，将要退出的页面在下层**，也就是上面演示的动画效果。
 
 到这里问题原因就非常清楚了，AnimatedNavHost没有设置AnimatedContent里每个页面的zIndex。
 
@@ -157,3 +158,15 @@ AnimatedNavHost(
 
 #### 四、写在最后
 已经在Accompanist提交了[PR](https://github.com/google/accompanist/pull/1282)，或许在某天会被采纳。如果你正在寻找快速的解决方案，一个简单的办法是复制Accompanist里Navigation的实现，共有4个文件，然后按照[PR](https://github.com/google/accompanist/pull/1282)进行一些改动，总耗时大概5分钟。（或者直接clone我修改过的[版本](https://github.com/ommiao/accompanist)）
+
+##### <span id="update-20220911">2022.09.11更新</span>
+[PR](https://github.com/google/accompanist/pull/1282)收到了comment，建议使用Navigation的backStack顺序来确定z-index，根据这个思路修改了一下，果然使用上对开发者更加友好了，具体修改如下：
+- 移除`composable(...)`中传递的zIndex参数
+- 直接使用navController的backQueue的size作为AnimatedContent的`targetContentZIndex`，这里强调一下AnimatedContent的层级规则，按照zIndex从大到小依此从上到下显示，并且如果targetContent的zIndex和其他状态Content的zIndex相同，则targetContent会被替换到相同zIndex的Contents的顶层，因此我们必须显式指定zIndex，这里详细解释一下：
+- 初始状态仅显示A页面，A为targetContent，此时backQueue.size为1，因此A页面默认的zIndex为1
+- A页面跳转B页面时，B为targetContent，此时backQueue.size为2，因此B页面的zIndex为2，显示层级是B在上A在下
+- B页面退回A页面时，A为targetContent，此时backQueue.size为1，因此A页面的zIndex为1，显示层级依然是B在上A在下
+
+```kotlin
+targetContentZIndex = navController.backQueue.size.toFloat()
+```
