@@ -38,6 +38,35 @@
                 <div class="post-list">
     
     <div class="post">
+        <a class="post-title" href="/2022/10/19/compose-row-with-same-width-items/">Compose里如何提前测量View的Size？</a>
+        <div class="post-except">
+            最近遇到一个平平无奇的需求，但在实现的时候却遇到了不少问题，值得记录一下。
+需求是这样的，在Compose Row中有两个文字Button，文字内容不同因此宽度也可能不同，如下：
+
+
+    
+      
+      
+    
+
+
+想要实现的效果是两个Button的宽度一致，如下：
+
+
+    
+      
+      
+    
+
+
+Option 1：固定宽度看到这里可能有人会说了，这有什么难的，直接通过Modifier设置同样的宽度不就搞定了吗？
+Button(mo
+            <a class="read-more" href="/2022/10/19/compose-row-with-same-width-items/"> ... </a>
+        </div>
+        <div class="post-date">2022.10.19</div>
+    </div>
+    
+    <div class="post">
         <a class="post-title" href="/2022/08/12/navigation-animation-issue/">给Compose官方修个小Bug</a>
         <div class="post-except">
             2022.09.11重要更新请见文末。Jetpack Compose在正式版本中提供了Navigation功能，但并不支持页面切换动画，生硬的页面过渡效果基本劝退了使用者。好在Google官方同时还在维护另外一个Accompanist支持库，这个库包括一些复杂Feature的Compose版本实现，在这些Feature迭代稳定之后，会直接集成到Compose核心Library中，比如Window Inset的控制，早期在Accompanist中就有实现，但在最新版本中已经标为

@@ -1,0 +1,636 @@
+<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
+    <link rel="alternate icon" type="image/png" href="/img/favicon.png">
+    <title>oMMiao's Blog</title>
+    
+<link rel="stylesheet" href="/css/reset.css">
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    
+<link rel="stylesheet" href="/css/markdown.css">
+
+    
+<link rel="stylesheet" href="/css/fonts.css">
+
+<meta name="generator" content="Hexo 6.2.0"></head>
+    <body>
+        <div class="paper">
+            <div class="paper-main">
+                
+                    <div class="post-header">
+    <a class="logo" href="/">oMMiao's Blog</a>
+    <a class="go-home" href="/">
+        <svg width="8" height="14" viewBox="0 0 8 14">
+            <path d="M7 1L1 7l6 6" stroke="#000" stroke-width="2" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+    </a>
+</div>
+                
+                <div class="post-main">
+
+    
+        <div class="post-main-title">
+            Compose里如何提前测量View的Size？
+        </div>
+        <div class="post-meta">
+            2022-10-19
+        </div>
+    
+
+    <div class="post-md">
+        <p>最近遇到一个平平无奇的需求，但在实现的时候却遇到了不少问题，值得记录一下。</p>
+<p>需求是这样的，在Compose Row中有两个文字Button，文字内容不同因此宽度也可能不同，如下：</p>
+<hr>
+
+    <div>
+      <img src="default-width.png" alt="默认宽度效果图" data-action="zoom" class="photozoom">
+      
+    </div>
+
+<hr>
+<p>想要实现的效果是两个Button的宽度一致，如下：</p>
+<hr>
+
+    <div>
+      <img src="same-width.png" alt="相同宽度效果图" data-action="zoom" class="photozoom">
+      
+    </div>
+
+<hr>
+<h3 id="Option-1：固定宽度"><a href="#Option-1：固定宽度" class="headerlink" title="Option 1：固定宽度"></a>Option 1：固定宽度</h3><p>看到这里可能有人会说了，这有什么难的，直接通过Modifier设置同样的宽度不就搞定了吗？</p>
+<pre><code class="kotlin">Button(modifier = Modifier.width(120.dp)){
+    Text(text = "...")
+}
+</code></pre>
+<hr>
+
+    <div>
+      <img src="fixed-width-0.png" alt="固定宽度效果图-正常" data-action="zoom" class="photozoom">
+      
+    </div>
+
+<hr>
+<p>确实在大多数情况下是可以的。但问题出在Button内部的Text的宽度并不是完全固定的，如果用户在系统设置了调整了文字大小，那么给定的宽度有可能不足以展示文字，导致文字被省略或者换行显示，效果如下：</p>
+<hr>
+
+    <div>
+      <img src="fixed-width-1.png" alt="固定宽度效果图-异常" data-action="zoom" class="photozoom">
+      
+    </div>
+
+<hr>
+<h3 id="Option-2：最小宽度"><a href="#Option-2：最小宽度" class="headerlink" title="Option 2：最小宽度"></a>Option 2：最小宽度</h3><p>既然固定宽度可能会导致Text空间不足，那么设置最小宽度呢？<br>直接放答案吧，设置最小宽度确实可以解决换行的问题，但是却又违背了最初的需求–两个Button宽度一致，因为在实际宽度超过最小宽度时，两个Button的宽度也就会根据不同文字内容动态扩展了，如下：</p>
+<hr>
+
+    <div>
+      <img src="min-width.png" alt="最小宽度效果图-异常" data-action="zoom" class="photozoom">
+      
+    </div>
+
+<hr>
+<h3 id="Option-3：设置相同weight"><a href="#Option-3：设置相同weight" class="headerlink" title="Option 3：设置相同weight"></a>Option 3：设置相同weight</h3><p>Compose Row支持给每个子元素设置weight，那么我们给两个Button设置同样的weight能否实现宽度一致的需求呢？<br>在实际进行测试之前，我也很期待，但是结果并不美好，Button的宽度确实一致了，但是会把整个Row的剩余空间全部充满：</p>
+<hr>
+
+    <div>
+      <img src="weight.png" alt="相同weight-异常" data-action="zoom" class="photozoom">
+      
+    </div>
+
+<hr>
+<p><strong>上面的方案都是Compose API可以直接支持的，但都不能满足需求。</strong></p>
+<p>仔细思考一下，如果要实现这个需求，我们最好能够明确知道宽度比较大的Button的宽度到底是多少，有了这个数字，我们给另外一个Button设置同样的宽度即可。<br>所以问题就转换成了如何获取到一个具体的Compose组件的宽度。</p>
+<p>Modifier有个<code>onPlaced</code>方法，这个方法可以返回当前组件在被渲染时的Size，没错，这就是我们想要的！<br>实现代码如下：</p>
+<pre><code class="kotlin">var buttonWidth by remember {
+    mutableStateOf(0)
+}
+val buttonWidthDp = with(LocalDensity.current) {
+    buttonWidth.toDp()
+}
+Row(
+    horizontalArrangement = Arrangement.spacedBy(16.dp)
+) {
+    Button(
+        modifier = Modifier.width(buttonWidthDp),
+        onClick = { }
+    ) {
+        Text(text = "Short")
+    }
+    Button(
+        modifier = Modifier.onPlaced { buttonWidth = it.size.width },
+        onClick = { }
+    ) {
+        Text(text = "Looooooong")
+    }
+}
+</code></pre>
+<p>简单说明一下，首先我们使用state记录buttonWidth，但在onPlaced之前我们并不能确定这个数字，因此buttonWidth的初始值一定是不准确的，在buttonWidth从初始值变成实际值的时候，有概率能看到左侧button会有闪动的问题。</p>
+<p>那么我们怎么能在Compose组件渲染之前拿到Size呢？</p>
+<p>Google给出了答案：SubcomposeLayout()，以下是直接复制的代码：</p>
+<pre><code class="kotlin">@Composable
+fun ViewWidthMeasureLayout(
+    modifier: Modifier,
+    viewToMeasure: @Composable () -&gt; Unit,
+    content: @Composable (width: Dp) -&gt; Unit
+) {
+    SubcomposeLayout(modifier) { constraints -&gt;
+        val width =
+            subcompose("viewToMeasure", viewToMeasure)[0]
+                .measure(Constraints()).width.toDp()
+        val contentPlaceable = subcompose("content") {
+            content(width)
+        }[0].measure(constraints)
+        layout(contentPlaceable.width, contentPlaceable.height) {
+            contentPlaceable.place(0, 0)
+        }
+    }
+}
+</code></pre>
+<p>SubcomposeLayout允许执行一个Composable方法，获取测量信息，但可以选择不去把它显示出来，其中viewToMeasure作为用于测量的Compose组件，而在真正的layout环节，却并不将viewToMeasure进行place操作，place即是将组件放置在layout的某个位置，不进行place就不会渲染这个组件。</p>
+<p>再来看看如何使用：</p>
+<pre><code class="kotlin">ViewWidthMeasureLayout(
+    modifier = Modifier.align(Alignment.Center),
+    viewToMeasure = {
+        Button(onClick = { }) {
+            Text(text = "Loooooong")
+        }
+    }
+) { width -&gt;
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)){
+        Button(modifier = Modifier.width(width), onClick = { }) {
+            Text(text = "Short")
+        }
+        Button(onClick = { }) {
+            Text(text = "Loooooong")
+        }
+    }
+}
+</code></pre>
+<p>可以看到，使用的时候还是有些麻烦的：</p>
+<ol>
+<li>用于测量的Button同时也是用于显示的，我们需要写两次。</li>
+<li>如果另外一个Button文字变成较长的那个，我们需要传递另一个Button作为测量View，后期维护的成本很大。</li>
+</ol>
+<p>既然知道了原理，那就来定制一个可以获取最大子元素宽度的Row，这样就可以一劳永逸了。</p>
+<p>实现代码：</p>
+<pre><code class="kotlin">@Composable
+fun SameItemWidthRow(
+    modifier: Modifier,
+    horizontalArrangement: Arrangement.Horizontal,
+    content: @Composable (maxItemWidth: Dp) -&gt; Unit
+) {
+    SubcomposeLayout(modifier) { constraints -&gt;
+        val maxItemWidth =
+            subcompose("viewToMeasure") {
+                content(Dp.Unspecified)
+            }.maxOfOrNull {
+                it.measure(Constraints()).width.toDp()
+            } ?: Dp.Unspecified
+
+        val contentPlaceable = subcompose("content") {
+            Row(
+                horizontalArrangement = horizontalArrangement
+            ) {
+                content(maxItemWidth)
+            }
+        }[0].measure(constraints)
+        layout(contentPlaceable.width, contentPlaceable.height) {
+            contentPlaceable.place(0, 0)
+        }
+    }
+}
+</code></pre>
+<p>这里我们遍历测量所有的子元素，找到最大的宽度，然后将其传递出去作为所有子元素的宽度。注意，我们只需要传递一次子元素，他们先被用于测量，然后再被用于绘制，用于测量时我们假定子元素的宽度是Dp.Unspecified，这样可以让子元素不受限制地测量真实宽度。</p>
+<p>使用体验：</p>
+<pre><code class="kotlin"> SameItemWidthRow(
+    horizontalArrangement = Arrangement.spacedBy(16.dp)
+) { maxItemWidth -&gt;
+    Button(modifier = Modifier.width(maxItemWidth), onClick = { }) {
+        Text(text = "Short")
+    }
+    Button(modifier = Modifier.width(maxItemWidth), onClick = { }) {
+        Text(text = "Loooooong")
+    }
+}
+</code></pre>
+<p>现在我们既实现了需求，又让代码简单得像原来的Row一样了。</p>
+<h3 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h3><p>在实现这个需求的时候，有个前提是所有子元素的宽度之和不能超过Row的宽度，如果不能满足这一点的话，也就不能让每个子元素等宽了，如果强制等宽，使用上面的解决方案会导致最后的元素渲染时实际宽度不足，还是无法满足宽度一致的需求。不过如果是这种情况，也没有其他的解决方案了，只能修改设计😄。</p>
+
+    </div>
+
+</div>
+                <div class="footer">
+    <span>Copyright © 2022 oMMiao's Blog</span>
+    <span>Powered By Hexo &amp; ZheLi</span>
+</div>
+
+
+<link rel="stylesheet" href="/css/a11y-dark.min.css">
+
+
+<script src="/js/highlight.min.js"></script>
+
+
+<script src="/js/highlightjs-line-numbers.js"></script>
+
+
+<script>
+    hljs.initHighlightingOnLoad();
+    hljs.initLineNumbersOnLoad();
+</script>
+
+            </div>
+        </div>
+    
+<script type="text/javascript">/**
+ * Pure JavaScript implementation of zoom.js.
+ *
+ * Original preamble:
+ * zoom.js - It's the best way to zoom an image
+ * @version v0.0.2
+ * @link https://github.com/fat/zoom.js
+ * @license MIT
+ *
+ * This is a fork of the original zoom.js implementation by @fat.
+ * Copyrights for the original project are held by @fat. All other copyright
+ * for changes in the fork are held by Nishanth Shanmugham.
+ *
+ * Copyright (c) 2013 @fat
+ * The MIT License. Copyright © 2016 Nishanth Shanmugham.
+ */
+(function() {
+    "use strict";
+    var _createClass = function() {
+        function defineProperties(target, props) {
+            for (var i = 0; i < props.length; i++) {
+                var descriptor = props[i];
+                descriptor.enumerable = descriptor.enumerable || false;
+                descriptor.configurable = true;
+                if ("value" in descriptor) descriptor.writable = true;
+                Object.defineProperty(target, descriptor.key, descriptor);
+            }
+        }
+        return function(Constructor, protoProps, staticProps) {
+            if (protoProps) defineProperties(Constructor.prototype, protoProps);
+            if (staticProps) defineProperties(Constructor, staticProps);
+            return Constructor;
+        };
+    }();
+    function _classCallCheck(instance, Constructor) {
+        if (!(instance instanceof Constructor)) {
+            throw new TypeError("Cannot call a class as a function");
+        }
+    }
+    (function(modules) {
+        var installedModules = {};
+        function __webpack_require__(moduleId) {
+            if (installedModules[moduleId]) return installedModules[moduleId].exports;
+            var module = installedModules[moduleId] = {
+                i: moduleId,
+                l: false,
+                exports: {}
+            };
+            modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+            module.l = true;
+            return module.exports;
+        }
+        __webpack_require__.m = modules;
+        __webpack_require__.c = installedModules;
+        __webpack_require__.i = function(value) {
+            return value;
+        };
+        __webpack_require__.d = function(exports, name, getter) {
+            if (!__webpack_require__.o(exports, name)) {
+                Object.defineProperty(exports, name, {
+                    configurable: false,
+                    enumerable: true,
+                    get: getter
+                });
+            }
+        };
+        __webpack_require__.n = function(module) {
+            var getter = module && module.__esModule ? function getDefault() {
+                return module["default"];
+            } : function getModuleExports() {
+                return module;
+            };
+            __webpack_require__.d(getter, "a", getter);
+            return getter;
+        };
+        __webpack_require__.o = function(object, property) {
+            return Object.prototype.hasOwnProperty.call(object, property);
+        };
+        __webpack_require__.p = "";
+        return __webpack_require__(__webpack_require__.s = 3);
+    })([ function(module, exports, __webpack_require__) {
+        "use strict";
+        __webpack_require__.d(exports, "a", function() {
+            return windowWidth;
+        });
+        __webpack_require__.d(exports, "b", function() {
+            return windowHeight;
+        });
+        __webpack_require__.d(exports, "c", function() {
+            return elemOffset;
+        });
+        __webpack_require__.d(exports, "d", function() {
+            return once;
+        });
+        var windowWidth = function windowWidth() {
+            return document.documentElement.clientWidth;
+        };
+        var windowHeight = function windowHeight() {
+            return document.documentElement.clientHeight;
+        };
+        var elemOffset = function elemOffset(elem) {
+            var rect = elem.getBoundingClientRect();
+            var docElem = document.documentElement;
+            var win = window;
+            return {
+                top: rect.top + win.pageYOffset - docElem.clientTop,
+                left: rect.left + win.pageXOffset - docElem.clientLeft
+            };
+        };
+        var once = function once(elem, type, handler) {
+            var fn = function fn(e) {
+                e.target.removeEventListener(type, fn);
+                handler();
+            };
+            elem.addEventListener(type, fn);
+        };
+    }, function(module, exports, __webpack_require__) {
+        "use strict";
+        var __WEBPACK_IMPORTED_MODULE_0__zoom_image_js__ = __webpack_require__(2);
+        var __WEBPACK_IMPORTED_MODULE_1__utils_js__ = __webpack_require__(0);
+        __webpack_require__.d(exports, "a", function() {
+            return zoom;
+        });
+        var current = null;
+        var offset = 80;
+        var initialScrollPos = -1;
+        var initialTouchPos = -1;
+        var setup = function setup(elem) {
+            elem.addEventListener("click", prepareZoom);
+        };
+        var prepareZoom = function prepareZoom(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (document.body.classList.contains("zoom-overlay-open")) {
+                return;
+            }
+            if (e.metaKey || e.ctrlKey) {
+                window.open(e.target.getAttribute("data-original") || e.target.src, "_blank");
+                return;
+            }
+            if (e.target.width >= __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__utils_js__["a"])() - offset) {
+                return;
+            }
+            closeCurrent(true);
+            current = new __WEBPACK_IMPORTED_MODULE_0__zoom_image_js__["a"](e.target, offset);
+            current.zoom();
+            addCloseListeners();
+        };
+        var closeCurrent = function closeCurrent(force) {
+            if (current == null) {
+                return;
+            }
+            if (force) {
+                current.dispose();
+            } else {
+                current.close();
+            }
+            removeCloseListeners();
+            current = null;
+        };
+        var addCloseListeners = function addCloseListeners() {
+            document.addEventListener("scroll", handleScroll);
+            document.addEventListener("keyup", handleKeyup);
+            document.addEventListener("touchstart", handleTouchStart);
+            document.addEventListener("click", handleClick, true);
+        };
+        var removeCloseListeners = function removeCloseListeners() {
+            document.removeEventListener("scroll", handleScroll);
+            document.removeEventListener("keyup", handleKeyup);
+            document.removeEventListener("touchstart", handleTouchStart);
+            document.removeEventListener("click", handleClick, true);
+        };
+        var handleScroll = function handleScroll() {
+            if (initialScrollPos == -1) {
+                initialScrollPos = window.pageYOffset;
+            }
+            var deltaY = Math.abs(initialScrollPos - window.pageYOffset);
+            if (deltaY >= 40) {
+                closeCurrent();
+            }
+        };
+        var handleKeyup = function handleKeyup(e) {
+            if (e.keyCode == 27) {
+                closeCurrent();
+            }
+        };
+        var handleTouchStart = function handleTouchStart(e) {
+            var t = e.touches[0];
+            if (t == null) {
+                return;
+            }
+            initialTouchPos = t.pageY;
+            e.target.addEventListener("touchmove", handleTouchMove);
+        };
+        var handleTouchMove = function handleTouchMove(e) {
+            var t = e.touches[0];
+            if (t == null) {
+                return;
+            }
+            if (Math.abs(t.pageY - initialTouchPos) > 10) {
+                closeCurrent();
+                e.target.removeEventListener("touchmove", handleTouchMove);
+            }
+        };
+        var handleClick = function handleClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeCurrent();
+        };
+        var zoom = Object.create(null);
+        zoom.setup = setup;
+    }, function(module, exports, __webpack_require__) {
+        "use strict";
+        var __WEBPACK_IMPORTED_MODULE_0__utils_js__ = __webpack_require__(0);
+        var Size = function Size(w, h) {
+            _classCallCheck(this, Size);
+            this.w = w;
+            this.h = h;
+        };
+        var ZoomImage = function() {
+            function ZoomImage(img, offset) {
+                _classCallCheck(this, ZoomImage);
+                this.img = img;
+                this.preservedTransform = img.style.transform;
+                this.wrap = null;
+                this.overlay = null;
+                this.offset = offset;
+            }
+            _createClass(ZoomImage, [ {
+                key: "forceRepaint",
+                value: function forceRepaint() {
+                    var _ = this.img.offsetWidth;
+                    return;
+                }
+            }, {
+                key: "zoom",
+                value: function zoom() {
+                    var size = new Size(this.img.naturalWidth, this.img.naturalHeight);
+                    this.wrap = document.createElement("div");
+                    this.wrap.classList.add("zoom-img-wrap");
+                    this.img.parentNode.insertBefore(this.wrap, this.img);
+                    this.wrap.appendChild(this.img);
+                    this.img.classList.add("zoom-img");
+                    this.img.setAttribute("data-action", "zoom-out");
+                    this.overlay = document.createElement("div");
+                    this.overlay.classList.add("zoom-overlay");
+                    this.caption = document.createElement("span");
+                    this.caption.innerHTML = this.img.getAttribute("alt");
+                    this.caption.classList.add("zoom-caption");
+                    this.overlay.appendChild(this.caption);
+                    document.body.appendChild(this.overlay);
+                    this.forceRepaint();
+                    var scale = this.calculateScale(size);
+                    this.forceRepaint();
+                    this.animate(scale);
+                    document.body.classList.add("zoom-overlay-open");
+                }
+            }, {
+                key: "calculateScale",
+                value: function calculateScale(size) {
+                    var maxScaleFactor = size.w / this.img.width;
+                    var viewportWidth = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["a"])() - this.offset;
+                    var viewportHeight = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["b"])() - this.offset;
+                    var imageAspectRatio = size.w / size.h;
+                    var viewportAspectRatio = viewportWidth / viewportHeight;
+                    if (size.w < viewportWidth && size.h < viewportHeight) {
+                        return maxScaleFactor;
+                    } else if (imageAspectRatio < viewportAspectRatio) {
+                        return viewportHeight / size.h * maxScaleFactor;
+                    } else {
+                        return viewportWidth / size.w * maxScaleFactor;
+                    }
+                }
+            }, {
+                key: "animate",
+                value: function animate(scale) {
+                    var imageOffset = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["c"])(this.img);
+                    var scrollTop = window.pageYOffset;
+                    var viewportX = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["a"])() / 2;
+                    var viewportY = scrollTop + __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["b"])() / 2;
+                    var imageCenterX = imageOffset.left + this.img.width / 2;
+                    var imageCenterY = imageOffset.top + this.img.height / 2;
+                    var tx = viewportX - imageCenterX;
+                    var ty = viewportY - imageCenterY;
+                    var tz = 0;
+                    var imgTr = "scale(" + scale + ")";
+                    var wrapTr = "translate3d(" + tx + "px, " + ty + "px, " + tz + "px)";
+                    this.img.style.transform = imgTr;
+                    this.wrap.style.transform = wrapTr;
+                }
+            }, {
+                key: "dispose",
+                value: function dispose() {
+                    if (this.wrap == null || this.wrap.parentNode == null) {
+                        return;
+                    }
+                    this.img.classList.remove("zoom-img");
+                    this.img.setAttribute("data-action", "zoom");
+                    this.wrap.parentNode.insertBefore(this.img, this.wrap);
+                    this.wrap.parentNode.removeChild(this.wrap);
+                    document.body.removeChild(this.overlay);
+                    document.body.classList.remove("zoom-overlay-transitioning");
+                }
+            }, {
+                key: "close",
+                value: function close() {
+                    var _this = this;
+                    document.body.classList.add("zoom-overlay-transitioning");
+                    this.img.style.transform = this.preservedTransform;
+                    if (this.img.style.length === 0) {
+                        this.img.removeAttribute("style");
+                    }
+                    this.wrap.style.transform = "none";
+                    __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_0__utils_js__["d"])(this.img, "transitionend", function() {
+                        _this.dispose();
+                        document.body.classList.remove("zoom-overlay-open");
+                    });
+                }
+            } ]);
+            return ZoomImage;
+        }();
+        exports["a"] = ZoomImage;
+    }, function(module, exports, __webpack_require__) {
+        "use strict";
+        Object.defineProperty(exports, "__esModule", {
+            value: true
+        });
+        var __WEBPACK_IMPORTED_MODULE_0__src_zoom_js__ = __webpack_require__(1);
+        document.addEventListener("DOMContentLoaded", function() {
+            var elems = document.querySelectorAll("img[data-action='zoom']");
+            for (var i = 0; i < elems.length; i++) {
+                __WEBPACK_IMPORTED_MODULE_0__src_zoom_js__["a"].setup(elems[i]);
+            }
+        });
+    } ]);
+})();
+</script><style>img[data-action="zoom"] {
+  cursor: pointer;
+  cursor: -webkit-zoom-in;
+  cursor: -moz-zoom-in;
+}
+.zoom-img,
+.zoom-img-wrap {
+  position: relative;
+  z-index: 666;
+  -webkit-transition: all 300ms;
+       -o-transition: all 300ms;
+          transition: all 300ms;
+}
+img.zoom-img {
+  cursor: pointer;
+  cursor: -webkit-zoom-out;
+  cursor: -moz-zoom-out;
+}
+.zoom-overlay {
+  z-index: 420;
+  background: #000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  filter: "alpha(opacity=0)";
+  opacity: 0;
+  text-align: center;
+  -webkit-transition:      opacity 300ms ease-in-out;
+       -o-transition:      opacity 300ms ease-in-out;
+          transition:      opacity 300ms ease-in-out;
+}
+.zoom-overlay-open .zoom-overlay {
+  filter: "alpha(opacity=100)";
+  opacity: 1;
+}
+.zoom-overlay-open,
+.zoom-overlay-transitioning {
+  cursor: default;
+}
+.zoom-overlay-transitioning .zoom-overlay {
+  opacity: 0;
+}
+.zoom-caption {
+    z-index:667;
+    bottom:10px;
+    position:fixed;
+    left:10px;
+    right:10px;
+    color:#fff;
+}
+</style></body></html>
